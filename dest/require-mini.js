@@ -326,7 +326,6 @@
     
     })(new Function('return this')());
     
-
     /* brought from https://github.com/KyleAMathews/deepmerge and unwrapped from UMD */
     function deepmerge(target, src) {
         var array = Array.isArray(src);
@@ -369,7 +368,6 @@
         return dst;
     }
     
-
     function safeGet(global, value) {
         return value.split('.').reduce(function (obj, prop) {
             return obj && obj[prop];
@@ -647,7 +645,6 @@
     }
     define.amd = {};
     
-
 
     global.define = define;
     global.require = require;
