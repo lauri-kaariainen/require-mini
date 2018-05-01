@@ -30,7 +30,7 @@
     if (typeof exports !== 'undefined' && exports)
     {
       // node.js
-      exports.Promise = Promise || NativePromise;
+      exports.Promise = nativePromiseSupported ? NativePromise : Promise;
     }
     else
     {
@@ -370,10 +370,14 @@
     }
     
 
-    function getGlobal(value) {
+    function safeGet(global, value) {
         return value.split('.').reduce(function (obj, prop) {
             return obj && obj[prop];
-        }, window);
+        }, global);
+    }
+    
+    function isFunction(fn) {
+        return typeof fn === 'function';
     }
     
     function defer() {
@@ -413,7 +417,7 @@
         var shim = config.shim[name];
         return _require(shim.deps || [], function() {
             return loadScript(name).then(shim.exportsFn || function() {
-                return (shim.init && shim.init()) || getGlobal(shim.exports);
+                return (shim.init && shim.init()) || safeGet(window, shim.exports);
             });
         }, null, path);
     }
@@ -457,6 +461,39 @@
             });
         }, null, path);
     }
+    
+    var commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
+        cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g;
+    function wrapCommonJS(name, factory) {
+        var deps = [];
+        factory.toString()
+            .replace(commentRegExp, '')
+            .replace(cjsRequireRegExp, function (match, dep) {
+                deps.push(dep);
+            });
+        return {
+            deps: deps,
+            factory: function() {
+                var args = arguments,
+                    modules = deps.reduce(function(modules, name, index) {
+                    modules[name] = args[index];
+                    return modules;
+                }, {});
+                return factory(
+                    function localRequire(name) {
+                        if(!modules[name]) {
+                            throw new Error('Module "' + deps + '" has not been loaded yet');
+                        }
+                        return modules[name];
+                    },
+                    locals.module(name),
+                    locals.exports(name)
+                );
+            }
+        };
+    }
+    
+    
     function _require(deps, factory, errback, path) {
         var currentModule = path.slice(-1)[0];
         return new Promise(function(resolve, reject) {
@@ -482,10 +519,14 @@
                 return modules[dependency];
             })).then(resolve, reject);
         }).then(function (instances) {
-            var result = factory.apply(null, instances);
-            return currentModule && modules[currentModule].module && modules[currentModule].module.exports || result;
+            if(isFunction(factory)) {
+                var result = factory.apply(null, instances);
+                return currentModule && safeGet(modules[currentModule], 'module.exports') || result;
+            } else {
+                return factory;
+            }
         }, function(reason) {
-            if(typeof errback === 'function') {
+            if(isFunction(errback)) {
                 errback(reason);
             }
             require.onError(reason);
@@ -589,7 +630,15 @@
         var deferred = pendingModule;
         if(name === null && !deferred) {
             throw new Error('Unexpected define!');
-        } else if (name === null || deferred && deferred.name === name) {
+        }
+    
+        if(deps.length === 0 && factory.length > 0) {
+            var wrapped = wrapCommonJS(name || deferred.name, factory);
+            deps = wrapped.deps;
+            factory = wrapped.factory;
+        }
+    
+        if (name === null || deferred && deferred.name === name) {
             var module = _require(deps, factory, deferred.reject, deferred.path);
             deferred.resolve(module);
         } else {
