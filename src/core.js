@@ -114,8 +114,8 @@ function wrapCommonJS(name, factory) {
                     }
                     return modules[name];
                 },
-                locals.module(name),
-                locals.exports(name)
+                locals.exports(name),
+                locals.module(name)
             );
         }
     };

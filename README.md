@@ -38,3 +38,12 @@ via Bower
 bower install require-mini --save
 ```
 
+## Differences to just-boris's repo
+
+* Newer build
+** Update some libraries
+** Some CommonJS support. 
+
+* Change ```js define('foobar',function(require,module,exports)) ``` to ```js define('foobar',function(require,exports,module))``` to make it same as in require.js
+   
+

@@ -153,12 +153,12 @@ describe("module locals", function () {
                 'B-cjs': 'B'
             }
         });
-        define('A-cjs', function(require, module, exports) {
+        define('A-cjs', function(require, exports, module) {
             exports.a = module.config();
             exports.b = require('B-cjs');
         });
 
-        define('B-cjs', function(require, module) {
+        define('B-cjs', function(require, exports, module) {
             module.exports = module.config();
         });
 
