@@ -55,4 +55,7 @@ define('foobar',function(require,exports,module))
 ```
 to make it same as in require.js
    
+## Gotchas
+### No relative paths! ```require("./foobar")``` is WRONG! Use just ```require("foobar")```
+
 
